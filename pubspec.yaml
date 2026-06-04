@@ -1,0 +1,48 @@
+name: notes_todos
+description: 'A neon themed notes and todos app built with Flutter.'
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  path: ^1.9.1
+  shared_preferences: ^2.5.5
+  sqflite: ^2.4.2+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.4
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/icon/notes_todos_icon.png
+    - assets/google_fonts/
+    - assets/images/cyber_bg.jpg
+
+  fonts:
+    - family: OneplusSansBold
+      fonts:
+        - asset: assets/google_fonts/OnePlusSans-Bold.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/google_fonts/Inter_18pt-Regular.ttf
+    - family: Orbitron
+      fonts:
+        - asset: assets/google_fonts/Orbitron-Regular.ttf
+    - family: PressStart2P
+      fonts:
+        - asset: assets/google_fonts/PressStart2P-Regular.ttf
+    - family: OnePlusSansRegular
+      fonts:
+        - asset: assets/google_fonts/OnePlusSans-Regular.ttf
+    - family: Cyberpunk
+      fonts:
+        - asset: assets/google_fonts/CircuitForemRegular.otf
