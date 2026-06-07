@@ -53,7 +53,7 @@ class ThemeController extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
     _followSystem = prefs.getBool('theme_follow_system') ?? false;
-    _textScale = prefs.getDouble('theme_text_scale') ?? 1.0;
+    _textScale = 1.0;
 
     final savedTypeIndex = prefs.getInt('theme_type_index');
     ThemeType? themeType;

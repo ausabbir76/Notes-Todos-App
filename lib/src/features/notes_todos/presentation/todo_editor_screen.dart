@@ -27,6 +27,7 @@ class _TodoEditorScreenState extends State<TodoEditorScreen> {
   final List<_TodoState> _history = [];
   bool _isUndoing = false;
   Timer? _historyDebounce;
+  double _baseScale = 1.0;
 
   @override
   void initState() {
@@ -144,137 +145,152 @@ class _TodoEditorScreenState extends State<TodoEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = ThemeController().currentTheme;
+    return ListenableBuilder(
+      listenable: ThemeController(),
+      builder: (context, _) {
+        final theme = ThemeController().currentTheme;
+        final textScale = ThemeController().textScale;
 
-    return Scaffold(
-      extendBody: true,
-      extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: true,
-      appBar: EditorTopBar(
-        theme: theme,
-        title: widget.todo == null ? 'New Todo' : '.....',
-        onBack: () => Navigator.of(context).pop(),
-        onSave: _save,
-        onUndo: _history.length > 1 ? _undo : null,
-      ),
-      bottomNavigationBar: EditorBottomTitleBar(
-        theme: theme,
-        titleController: _titleController,
-        titleFocusNode: _titleFocusNode,
-        textInputAction: TextInputAction.done,
-      ),
-      body: NeonBackground(
-        theme: theme,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final topPadding = MediaQuery.of(context).padding.top + AppScale.size(12);
-            final bottomPadding = MediaQuery.of(context).padding.bottom + AppScale.size(12);
-            final minContainerHeight = (constraints.maxHeight - topPadding - bottomPadding)
-                    .clamp(0.0, double.infinity)
-                    .toDouble();
+        return Scaffold(
+          extendBody: true,
+          extendBodyBehindAppBar: true,
+          resizeToAvoidBottomInset: true,
+          appBar: EditorTopBar(
+            theme: theme,
+            title: widget.todo == null ? 'New Todo' : '.....',
+            onBack: () => Navigator.of(context).pop(),
+            onSave: _save,
+            onUndo: _history.length > 1 ? _undo : null,
+          ),
+          bottomNavigationBar: EditorBottomTitleBar(
+            theme: theme,
+            titleController: _titleController,
+            titleFocusNode: _titleFocusNode,
+            textInputAction: TextInputAction.done,
+          ),
+          body: GestureDetector(
+            onScaleStart: (_) => _baseScale = ThemeController().textScale,
+            onScaleUpdate: (details) {
+              if (details.pointerCount >= 2) {
+                ThemeController().setTextScale(_baseScale * details.scale);
+              }
+            },
+            child: NeonBackground(
+              theme: theme,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final topPadding = MediaQuery.of(context).padding.top + AppScale.size(12);
+                  final bottomPadding = MediaQuery.of(context).padding.bottom + AppScale.size(12);
+                  final minContainerHeight = (constraints.maxHeight - topPadding - bottomPadding)
+                          .clamp(0.0, double.infinity)
+                          .toDouble();
 
-            return SingleChildScrollView(
-              padding: EdgeInsets.only(
-                top: topPadding,
-                bottom: bottomPadding,
-                left: AppScale.size(20),
-                right: AppScale.size(20),
-              ),
-              physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: minContainerHeight,
-                ),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 90),
-                        decoration: theme.getEntryItemDecoration(false),
-                      ),
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      top: topPadding,
+                      bottom: bottomPadding,
+                      left: AppScale.size(20),
+                      right: AppScale.size(20),
                     ),
-                    Padding(
-                      padding: AppScale.only(
-                        top: 20,
-                        left: 20,
-                        right: 20,
-                        bottom: 40,
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: minContainerHeight,
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Stack(
                         children: [
-                          ReorderableListView(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            buildDefaultDragHandles: false,
-                            onReorder: (oldIndex, newIndex) {
-                              setState(() {
-                                if (newIndex > oldIndex) newIndex -= 1;
-                                final item = _tasks.removeAt(oldIndex);
-                                _tasks.insert(newIndex, item);
-                              });
-                              _recordState();
-                            },
-                            proxyDecorator: (child, index, animation) {
-                              return AnimatedBuilder(
-                                animation: animation,
-                                builder: (context, _) {
-                                  return Material(
-                                    color: Colors.transparent,
-                                    child: child,
-                                  );
-                                },
-                              );
-                            },
-                            header: null,
-                            footer: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Padding(
-                                padding: AppScale.only(left: 20),
-                                child: TextButton.icon(
-                                  onPressed: _addTask,
-                                  icon: Icon(Icons.add, color: theme.primaryColor),
-                                  label: Text(
-                                    'Add Item',
-                                    style: theme.themeItemTitleStyle.copyWith(
-                                      color: theme.primaryColor,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                          Positioned.fill(
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 90),
+                              decoration: theme.getEntryItemDecoration(false),
                             ),
-                            children: [
-                              for (var i = 0; i < _tasks.length; i++)
-                                _TaskEditorRow(
-                                  key: _tasks[i].key,
-                                  index: i,
-                                  draft: _tasks[i],
-                                  onToggle: () {
+                          ),
+                          Padding(
+                            padding: AppScale.only(
+                              top: 20,
+                              left: 20,
+                              right: 20,
+                              bottom: 40,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ReorderableListView(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  buildDefaultDragHandles: false,
+                                  onReorder: (oldIndex, newIndex) {
                                     setState(() {
-                                      _tasks[i].completed = !_tasks[i].completed;
+                                      if (newIndex > oldIndex) newIndex -= 1;
+                                      final item = _tasks.removeAt(oldIndex);
+                                      _tasks.insert(newIndex, item);
                                     });
                                     _recordState();
                                   },
-                                  onRemove: () => _removeTask(i),
-                                  onAdd: _addTask,
+                                  proxyDecorator: (child, index, animation) {
+                                    return AnimatedBuilder(
+                                      animation: animation,
+                                      builder: (context, _) {
+                                        return Material(
+                                          color: Colors.transparent,
+                                          child: child,
+                                        );
+                                      },
+                                    );
+                                  },
+                                  header: null,
+                                  footer: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Padding(
+                                      padding: AppScale.only(left: 20),
+                                      child: TextButton.icon(
+                                        onPressed: _addTask,
+                                        icon: Icon(Icons.add, color: theme.primaryColor),
+                                        label: Text(
+                                          'Add Item',
+                                          style: theme.themeItemTitleStyle.copyWith(
+                                            color: theme.primaryColor,
+                                            fontSize: 16 * textScale,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  children: [
+                                    for (var i = 0; i < _tasks.length; i++)
+                                      _TaskEditorRow(
+                                        key: _tasks[i].key,
+                                        index: i,
+                                        draft: _tasks[i],
+                                        textScale: textScale,
+                                        onToggle: () {
+                                          setState(() {
+                                            _tasks[i].completed = !_tasks[i].completed;
+                                          });
+                                          _recordState();
+                                        },
+                                        onRemove: () => _removeTask(i),
+                                        onAdd: _addTask,
+                                      ),
+                                  ],
                                 ),
-                            ],
+                              ],
+                            ),
+                          ),
+                          EditorTimestamp(
+                            theme: theme,
+                            timestamp: widget.todo?.createdAt ?? DateTime.now(),
                           ),
                         ],
                       ),
                     ),
-                    EditorTimestamp(
-                      theme: theme,
-                      timestamp: widget.todo?.createdAt ?? DateTime.now(),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
-            );
-          },
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -328,6 +344,7 @@ class _TaskEditorRow extends StatelessWidget {
     required this.onToggle,
     required this.onRemove,
     required this.onAdd,
+    required this.textScale,
     super.key,
   });
 
@@ -336,6 +353,7 @@ class _TaskEditorRow extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onRemove;
   final VoidCallback onAdd;
+  final double textScale;
 
   @override
   Widget build(BuildContext context) {
@@ -379,13 +397,14 @@ class _TaskEditorRow extends StatelessWidget {
               }
             },
             style: theme.entrySubtitleStyle.copyWith(
-              fontSize: 16,
+              fontSize: 17 * textScale,
               decoration: draft.completed ? TextDecoration.lineThrough : null,
+              height: 1.45,
             ),
             decoration: InputDecoration(
               hintText: 'Todo',
               hintStyle: theme.entrySubtitleStyle.copyWith(
-                fontSize: 17,
+                fontSize: 16 * textScale,
                 color: theme.appBarIconColor.withValues(alpha: .35),
               ),
               border: InputBorder.none,

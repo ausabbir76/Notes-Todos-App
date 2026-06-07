@@ -24,6 +24,7 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
    
   final List<_NoteState> _history = [];
   Timer? _historyDebounce;
+  double _baseScale = 1.0;
 
   @override
   void initState() {
@@ -100,87 +101,104 @@ class _NoteEditorScreenState extends State<NoteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = ThemeController().currentTheme;
-    return Scaffold(
-      extendBody: true,
-      extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: true,
-      appBar: EditorTopBar(
-        theme: theme,
-        title: widget.note == null ? 'New Note' : '.....',
-        onBack: () => Navigator.of(context).pop(),
-        onSave: _save,
-        onUndo: _history.length > 1 ? _undo : null,
-      ),
-      bottomNavigationBar: EditorBottomTitleBar(
-        theme: theme,
-        titleController: _titleController,
-        titleFocusNode: _titleFocusNode,
-      ),
-      body: NeonBackground(
-        theme: theme,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final topPadding = MediaQuery.of(context).padding.top + AppScale.size(12);
-            final bottomPadding = MediaQuery.of(context).padding.bottom + AppScale.size(12);
-            final minContainerHeight = (constraints.maxHeight - topPadding - bottomPadding)
-                    .clamp(0.0, double.infinity)
-                    .toDouble();
+    return ListenableBuilder(
+      listenable: ThemeController(),
+      builder: (context, _) {
+        final theme = ThemeController().currentTheme;
+        final textScale = ThemeController().textScale;
+        return Scaffold(
+          extendBody: true,
+          extendBodyBehindAppBar: true,
+          resizeToAvoidBottomInset: true,
+          appBar: EditorTopBar(
+            theme: theme,
+            title: widget.note == null ? 'New Note' : '.....',
+            onBack: () => Navigator.of(context).pop(),
+            onSave: _save,
+            onUndo: _history.length > 1 ? _undo : null,
+          ),
+          bottomNavigationBar: EditorBottomTitleBar(
+            theme: theme,
+            titleController: _titleController,
+            titleFocusNode: _titleFocusNode,
+          ),
+          body: GestureDetector(
+            onScaleStart: (_) => _baseScale = ThemeController().textScale,
+            onScaleUpdate: (details) {
+              if (details.pointerCount >= 2) {
+                ThemeController().setTextScale(_baseScale * details.scale);
+              }
+            },
+            child: NeonBackground(
+              theme: theme,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final topPadding = MediaQuery.of(context).padding.top + AppScale.size(12);
+                  final bottomPadding = MediaQuery.of(context).padding.bottom + AppScale.size(12);
+                  final minContainerHeight = (constraints.maxHeight - topPadding - bottomPadding)
+                          .clamp(0.0, double.infinity)
+                          .toDouble();
 
-            return SingleChildScrollView(
-              padding: EdgeInsets.only(
-                top: topPadding,
-                bottom: bottomPadding,
-                left: AppScale.size(20),
-                right: AppScale.size(20),
-              ),
-              physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: minContainerHeight),
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        decoration: theme.getEntryItemDecoration(false),
-                      ),
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      top: topPadding,
+                      bottom: bottomPadding,
+                      left: AppScale.size(20),
+                      right: AppScale.size(20),
                     ),
-                    Padding(
-                      padding: AppScale.only(top: 20, left: 20, right: 20, bottom: 40),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: minContainerHeight),
+                      child: Stack(
                         children: [
-                          TextField(
-                            controller: _contentController,
-                            maxLines: null,
-                            minLines: 5,
-                            keyboardType: TextInputType.multiline,
-                            textAlignVertical: TextAlignVertical.top,
-                            style: theme.entrySubtitleStyle.copyWith(fontSize: 16, height: 1.5),
-                            decoration: InputDecoration(
-                              hintText: 'Content',
-                              hintStyle: theme.entrySubtitleStyle.copyWith(
-                                fontSize: 17,
-                                color: theme.appBarIconColor.withValues(alpha: 0.3),
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
+                          Positioned.fill(
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: theme.getEntryItemDecoration(false),
                             ),
+                          ),
+                          Padding(
+                            padding: AppScale.only(top: 20, left: 20, right: 20, bottom: 40),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextField(
+                                  controller: _contentController,
+                                  maxLines: null,
+                                  minLines: 5,
+                                  keyboardType: TextInputType.multiline,
+                                  textAlignVertical: TextAlignVertical.top,
+                                  style: theme.entrySubtitleStyle.copyWith(
+                                    fontSize: 17 * textScale,
+                                    height: 1.45,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Content',
+                                    hintStyle: theme.entrySubtitleStyle.copyWith(
+                                      fontSize: 16 * textScale,
+                                      color: theme.appBarIconColor.withValues(alpha: 0.3),
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          EditorTimestamp(
+                            theme: theme,
+                            timestamp: widget.note?.createdAt ?? DateTime.now(),
                           ),
                         ],
                       ),
                     ),
-                    EditorTimestamp(
-                      theme: theme,
-                      timestamp: widget.note?.createdAt ?? DateTime.now(),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
-            );
-          },
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 
